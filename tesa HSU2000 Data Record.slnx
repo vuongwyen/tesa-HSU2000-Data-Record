@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Application/Application.vdproj" Type="Installer" />
+  <Project Path="tesa HSU2000 Data Record/tesa HSU2000 Data Record.csproj" />
+</Solution>
