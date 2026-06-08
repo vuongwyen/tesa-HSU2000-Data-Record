@@ -18,7 +18,8 @@ public class HsuTestResult
     
     public decimal AvgValue { get; set; }
     public string Unit { get; set; } = "Newton";
-    public DateTime TestedAt { get; set; }
+    
+    public DateTime TestedAt { get; set; } = DateTime.Now;
 
     [JsonIgnore]
     public List<decimal> RawForceData { get; set; } = new List<decimal>();

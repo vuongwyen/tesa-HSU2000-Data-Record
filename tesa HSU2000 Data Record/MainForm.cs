@@ -883,9 +883,17 @@ public class MainForm : Form
         result.Tester = _txtTester.Text.Trim();
         result.Timestamp = DateTime.Now;
         
-        // --- THÊM VÀO DATABASE ---
-        _dbContext.TestResults.Add(result);
-        _dbContext.SaveChanges(); // Lấy được ID tự tăng từ SQLite
+        try
+        {
+            // --- THÊM VÀO DATABASE ---
+            _dbContext.TestResults.Add(result);
+            _dbContext.SaveChanges(); // Lấy được ID tự tăng từ SQLite
+        }
+        catch (Exception ex)
+        {
+            _dbContext.Entry(result).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+            MessageBox.Show($"Lỗi lưu Database: {ex.Message}", "Lỗi DB", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
 
         _latestResultForChart = result;
         _zoomFactor = 1.0f; 
