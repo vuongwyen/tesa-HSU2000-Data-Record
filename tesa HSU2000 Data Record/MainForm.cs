@@ -9,8 +9,10 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.EntityFrameworkCore;
 using Zuby.ADGV;
 using ClosedXML.Excel;
+using tesa_HSU2000_Data_Record.Controls;
 using tesa_HSU2000_Data_Record.Data;
 using tesa_HSU2000_Data_Record.Models;
 using tesa_HSU2000_Data_Record.Services;
@@ -38,16 +40,17 @@ public class MainForm : Form
     private Label _lblWatcherStatus;
     private Label _lblSyncStatus;
     private AdvancedDataGridView _dgvResults;
-    private Button _btnToggleWatcher;
-    private Button _btnBrowseFolder;
+    private TesaRoundedButton _btnToggleWatcher;
+    private TesaRoundedButton _btnBrowseFolder;
     private TextBox _txtFolderPath;
-    private Button _btnGenerateDemo;
+    private TesaRoundedButton _btnGenerateDemo;
     
     // Bulk Action & Report Controls
-    private Button _btnBulkSync;
-    private Button _btnBulkDelete;
-    private Button _btnExport;
-    private Button _btnBackup;
+    private TesaRoundedButton _btnBulkSync;
+    private TesaRoundedButton _btnBulkDelete;
+    private TesaRoundedButton _btnExport;
+    private TesaRoundedButton _btnBackup;
+    private TesaRoundedButton _btnRestore;
     private TextBox _txtSearch;
 
     // Inputs
@@ -58,13 +61,33 @@ public class MainForm : Form
     private TextBox _txtTester;
 
     // Chart & Interactivity
-    private Panel _pnlChart;
+    private TesaRoundedPanel _pnlChart;
     private HsuTestResult? _latestResultForChart;
     private float _zoomFactor = 1.0f;
     private float _panX = 0f;
     private bool _isPanning = false;
     private Point _lastMousePos;
     private Point _currentMousePos = new Point(-1, -1);
+    
+    // New UXUI Custom Navigation
+    private Panel _pnlNavIndicator;
+    private TesaRoundedButton _btnTabDashboard;
+    private TesaRoundedButton _btnTabDataSheet;
+    private TabControl _mainTabControl;
+    private Button _btnLogin;
+
+    // New UXUI Analytics
+    private Label _lblTotalSamplesToday;
+    private Label _lblTotalBatchToday;
+    private Label _lblMinForce;
+    private Label _lblMaxForce;
+    
+    // New UXUI Live Value
+    private Label _lblLiveWeight;
+
+    // Auth
+    private const string ADMIN_PASSWORD = "password";
+    private bool _isAdminAuthenticated = false;
 
     public MainForm()
     {
@@ -74,108 +97,206 @@ public class MainForm : Form
 
     private void InitializeComponent()
     {
-        this.Text = "Máy trạm Đồng bộ Dữ liệu tesa HSU-2000";
+        this.Text = "tesa Scale Data Collection - ML2041 (HSU2000)";
         this.Size = new Size(1350, 850);
         this.BackColor = BackgroundLight;
         this.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point);
         this.StartPosition = FormStartPosition.CenterScreen;
 
-        // --- HEADER ---
-        var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = TesaWhite };
+        // --- HEADER & NAVIGATION ---
+        var pnlHeader = new Panel { Dock = DockStyle.Top, Height = 60, BackColor = TesaWhite };
         var pnlStripe = new Panel { Dock = DockStyle.Bottom, Height = 4, BackColor = TesaRed };
         pnlHeader.Controls.Add(pnlStripe);
+        this.Controls.Add(pnlHeader);
+
+        string logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TESA-Logo.svg.png");
+        if (System.IO.File.Exists(logoPath))
+        {
+            var picLogo = new PictureBox
+            {
+                Image = Image.FromFile(logoPath),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Size = new Size(80, 25),
+                Location = new Point(10, 15)
+            };
+            pnlHeader.Controls.Add(picLogo);
+        }
 
         var lblTitle = new Label
         {
-            Text = "Thu thập Dữ liệu HSU-2000",
-            Font = new Font("Segoe UI", 18F, FontStyle.Bold),
-            ForeColor = TesaBlue,
+            Text = "tesa Scale Data Collection - ML2041",
+            Font = new Font("Segoe UI", 12F, FontStyle.Regular),
+            ForeColor = Color.Black,
             AutoSize = true,
-            Location = new Point(20, 25)
+            Location = new Point(100, 18)
         };
         pnlHeader.Controls.Add(lblTitle);
 
-        // --- LEFT PANEL (INPUTS) ---
-        var pnlLeft = new Panel
+        // Custom Tabs
+        _btnTabDashboard = CreateTabButton("Dashboard", 430);
+        _btnTabDataSheet = CreateTabButton("Data Sheet", 560);
+
+        _pnlNavIndicator = new Panel { Height = 3, BackColor = TesaRed, Top = 57 };
+        pnlHeader.Controls.Add(_pnlNavIndicator);
+
+        _btnLogin = new Button
         {
-            Dock = DockStyle.Left,
-            Width = 350,
-            Padding = new Padding(20),
-            BackColor = BackgroundLight
-        };
-
-        int startY = 20;
-        int spacing = 65;
-
-        pnlLeft.Controls.Add(new Label { Text = "Mã Nart:", Location = new Point(20, startY), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) });
-        _txtNart = new TextBox { Location = new Point(20, startY + 25), Width = 300 };
-        pnlLeft.Controls.Add(_txtNart);
-
-        pnlLeft.Controls.Add(new Label { Text = "Mã Lô (Batch):", Location = new Point(20, startY + spacing), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) });
-        _txtBatchCode = new TextBox { Location = new Point(20, startY + spacing + 25), Width = 300 };
-        pnlLeft.Controls.Add(_txtBatchCode);
-
-        pnlLeft.Controls.Add(new Label { Text = "Vị trí:", Location = new Point(20, startY + spacing * 2), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) });
-        _txtLocation = new TextBox { Location = new Point(20, startY + spacing * 2 + 25), Width = 300 };
-        pnlLeft.Controls.Add(_txtLocation);
-
-        pnlLeft.Controls.Add(new Label { Text = "Tên Mẫu:", Location = new Point(20, startY + spacing * 3), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) });
-        _txtSampleName = new TextBox { Location = new Point(20, startY + spacing * 3 + 25), Width = 300 };
-        pnlLeft.Controls.Add(_txtSampleName);
-
-        pnlLeft.Controls.Add(new Label { Text = "Người thử:", Location = new Point(20, startY + spacing * 4), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) });
-        _txtTester = new TextBox { Location = new Point(20, startY + spacing * 4 + 25), Width = 300 };
-        pnlLeft.Controls.Add(_txtTester);
-
-        pnlLeft.Controls.Add(new Label { Text = "Thư mục theo dõi:", Location = new Point(20, startY + spacing * 5), AutoSize = true, Font = new Font("Segoe UI", 10F, FontStyle.Bold) });
-        _txtFolderPath = new TextBox { Location = new Point(20, startY + spacing * 5 + 25), Width = 220, ReadOnly = true };
-        _btnBrowseFolder = new Button { Text = "Duyệt...", Location = new Point(245, startY + spacing * 5 + 24), Width = 75, BackColor = Color.LightGray };
-        _btnBrowseFolder.Click += BtnBrowseFolder_Click;
-        pnlLeft.Controls.Add(_txtFolderPath);
-        pnlLeft.Controls.Add(_btnBrowseFolder);
-
-        _btnToggleWatcher = new Button
-        {
-            Text = "Bắt đầu theo dõi",
+            Text = "Đăng nhập",
             BackColor = TesaBlue,
             ForeColor = TesaWhite,
             FlatStyle = FlatStyle.Flat,
-            Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-            Size = new Size(300, 40),
-            Location = new Point(20, startY + spacing * 6 + 10),
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            Size = new Size(100, 30),
+            Location = new Point(this.Width - 140, 15),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Cursor = Cursors.Hand
+        };
+        _btnLogin.FlatAppearance.BorderSize = 0;
+        _btnLogin.Click += BtnLogin_Click;
+        pnlHeader.Controls.Add(_btnLogin);
+
+        pnlHeader.Controls.Add(_btnTabDashboard);
+        pnlHeader.Controls.Add(_btnTabDataSheet);
+
+        // --- HIDDEN TAB CONTROL ---
+        _mainTabControl = new TabControl 
+        { 
+            Dock = DockStyle.Fill, 
+            ItemSize = new Size(0, 1), 
+            SizeMode = TabSizeMode.Fixed, 
+            Appearance = TabAppearance.FlatButtons 
+        };
+        
+        var tabDashboard = new TabPage("Dashboard") { BackColor = BackgroundLight };
+        var tabDataSheet = new TabPage("Data Sheet") { BackColor = BackgroundLight };
+        
+        _mainTabControl.TabPages.Add(tabDashboard);
+        _mainTabControl.TabPages.Add(tabDataSheet);
+        this.Controls.Add(_mainTabControl);
+
+        // ----------------------------------------------------
+        // TAB 1: DASHBOARD
+        // ----------------------------------------------------
+        var pnlDashLeft = new Panel { Dock = DockStyle.Left, Width = 350, Padding = new Padding(10) };
+        var pnlDashRight = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10) };
+        tabDashboard.Controls.Add(pnlDashRight);
+        tabDashboard.Controls.Add(pnlDashLeft);
+
+        // --- Dash Left: Config & Ref ---
+        var gbNetwork = new GroupBox { Text = "1. Cấu hình Hệ thống", Dock = DockStyle.Top, Height = 180, Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = TesaRed };
+        var pnlNetInner = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10), Font = new Font("Segoe UI", 10F, FontStyle.Regular), ForeColor = Color.Black };
+        gbNetwork.Controls.Add(pnlNetInner);
+        
+        pnlNetInner.Controls.Add(new Label { Text = "Thư mục theo dõi:", Location = new Point(10, 10), AutoSize = true, ForeColor = Color.DimGray });
+        _txtFolderPath = new TextBox { Location = new Point(10, 35), Width = 280, ReadOnly = true, BorderStyle = BorderStyle.FixedSingle };
+        pnlNetInner.Controls.Add(_txtFolderPath);
+
+        _btnBrowseFolder = new TesaRoundedButton { Text = "Duyệt...", Width = 80, Height = 28, Location = new Point(210, 70), BackColor = Color.LightGray, ForeColor = Color.Black, BorderRadius = 4 };
+        _btnBrowseFolder.Click += BtnBrowseFolder_Click;
+        pnlNetInner.Controls.Add(_btnBrowseFolder);
+
+        _lblWatcherStatus = new Label { Text = "DISCONNECTED", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.DimGray, BackColor = Color.FromArgb(230, 230, 230), Location = new Point(10, 110), Size = new Size(280, 30), TextAlign = ContentAlignment.MiddleCenter };
+        pnlNetInner.Controls.Add(_lblWatcherStatus);
+
+        var pnlDashSpacer1 = new Panel { Dock = DockStyle.Top, Height = 10 };
+
+        var gbRef = new GroupBox { Text = "2. Thông tin tham chiếu", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = TesaRed };
+        var pnlRefInner = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10), Font = new Font("Segoe UI", 10F, FontStyle.Regular), ForeColor = Color.Black };
+        gbRef.Controls.Add(pnlRefInner);
+
+        pnlRefInner.Controls.Add(new Label { Text = "Mã NART", Location = new Point(10, 20), AutoSize = true, ForeColor = Color.DimGray });
+        _txtNart = new TextBox { Location = new Point(10, 45), Width = 310, BorderStyle = BorderStyle.FixedSingle };
+        pnlRefInner.Controls.Add(_txtNart);
+
+        pnlRefInner.Controls.Add(new Label { Text = "Lô hàng (Batch)", Location = new Point(10, 100), AutoSize = true, ForeColor = Color.DimGray });
+        _txtBatchCode = new TextBox { Location = new Point(10, 125), Width = 150, BorderStyle = BorderStyle.FixedSingle };
+        pnlRefInner.Controls.Add(_txtBatchCode);
+
+        pnlRefInner.Controls.Add(new Label { Text = "Tên mẫu (Sample Name)", Location = new Point(170, 100), AutoSize = true, ForeColor = Color.DimGray });
+        _txtSampleName = new TextBox { Location = new Point(170, 125), Width = 150, BorderStyle = BorderStyle.FixedSingle };
+        pnlRefInner.Controls.Add(_txtSampleName);
+
+        pnlRefInner.Controls.Add(new Label { Text = "Vị trí (Location)", Location = new Point(10, 180), AutoSize = true, ForeColor = Color.DimGray });
+        _txtLocation = new TextBox { Location = new Point(10, 205), Width = 150, BorderStyle = BorderStyle.FixedSingle };
+        pnlRefInner.Controls.Add(_txtLocation);
+
+        pnlRefInner.Controls.Add(new Label { Text = "Người test (Tester)", Location = new Point(170, 180), AutoSize = true, ForeColor = Color.DimGray });
+        _txtTester = new TextBox { Location = new Point(170, 205), Width = 150, BorderStyle = BorderStyle.FixedSingle };
+        pnlRefInner.Controls.Add(_txtTester);
+
+        _lblSyncStatus = new Label { Text = "Server: Chưa kết nối", Font = new Font("Segoe UI", 9F, FontStyle.Regular), ForeColor = Color.White, BackColor = TesaBlue, Dock = DockStyle.Bottom, Height = 25, TextAlign = ContentAlignment.MiddleLeft };
+        
+        pnlDashLeft.Controls.Add(gbRef);
+        pnlDashLeft.Controls.Add(pnlDashSpacer1);
+        pnlDashLeft.Controls.Add(gbNetwork);
+
+        // --- Dash Right: Live Value ---
+        var gbLive = new GroupBox { Text = "3. Giá trị đo mới nhất", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = TesaRed };
+        var pnlLiveInner = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20), Font = new Font("Segoe UI", 10F, FontStyle.Regular), ForeColor = Color.Black };
+        gbLive.Controls.Add(pnlLiveInner);
+
+        _lblLiveWeight = new Label 
+        { 
+            Text = "0.00 N", 
+            Font = new Font("Segoe UI", 48F, FontStyle.Bold), 
+            ForeColor = Color.FromArgb(150, 160, 175), 
+            Dock = DockStyle.Bottom,
+            Height = 100,
+            TextAlign = ContentAlignment.MiddleCenter
+        };
+        pnlLiveInner.Controls.Add(_lblLiveWeight);
+
+        var pnlLiveBottom = new Panel { Dock = DockStyle.Bottom, Height = 100 };
+        _btnToggleWatcher = new TesaRoundedButton
+        {
+            Text = "↓ Bắt đầu theo dõi Thư mục",
+            BackColor = TesaRed,
+            ForeColor = TesaWhite,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 24F, FontStyle.Bold),
+            Dock = DockStyle.Bottom,
+            Height = 80,
+            Cursor = Cursors.Hand,
+            BorderRadius = 10
         };
         _btnToggleWatcher.FlatAppearance.BorderSize = 0;
         _btnToggleWatcher.Click += BtnToggleWatcher_Click;
-        pnlLeft.Controls.Add(_btnToggleWatcher);
 
-        _lblWatcherStatus = new Label { Text = "Trạng thái: ĐANG DỪNG", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.DimGray, Location = new Point(20, startY + spacing * 6 + 60), AutoSize = true };
-        _lblSyncStatus = new Label { Text = "Đồng bộ: Nhàn rỗi", Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.DimGray, Location = new Point(20, startY + spacing * 6 + 80), AutoSize = true };
-        pnlLeft.Controls.Add(_lblWatcherStatus);
-        pnlLeft.Controls.Add(_lblSyncStatus);
-
-        _btnGenerateDemo = new Button
+        _btnGenerateDemo = new TesaRoundedButton
         {
-            Text = "Tạo File Demo (Test)",
+            Text = "Tạo File Demo",
             BackColor = Color.Orange,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-            Size = new Size(300, 35),
-            Location = new Point(20, startY + spacing * 6 + 120),
-            Cursor = Cursors.Hand
+            Size = new Size(120, 30),
+            Location = new Point(0, 0),
+            Cursor = Cursors.Hand,
+            BorderRadius = 4,
+            Visible = false // Ẩn mặc định
         };
         _btnGenerateDemo.FlatAppearance.BorderSize = 0;
         _btnGenerateDemo.Click += BtnGenerateDemo_Click;
-        pnlLeft.Controls.Add(_btnGenerateDemo);
+        pnlLiveBottom.Controls.Add(_btnGenerateDemo);
 
-        // --- RIGHT PANEL ---
-        var pnlRight = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20) };
-        
-        var lblChartTitle = new Label { Text = "Biên độ dao động (Lực) - Kéo để cuộn, Lăn chuột để Zoom", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = TesaBlue, Dock = DockStyle.Top, Height = 30 };
-        
-        _pnlChart = new Panel { Dock = DockStyle.Top, Height = 250, BackColor = TesaWhite, BorderStyle = BorderStyle.FixedSingle };
-        
+        pnlLiveBottom.Controls.Add(_btnToggleWatcher);
+        pnlLiveInner.Controls.Add(pnlLiveBottom);
+
+        pnlDashRight.Controls.Add(gbLive);
+
+        // ----------------------------------------------------
+        // TAB 2: ANALYTICS
+        // ----------------------------------------------------
+        var pnlStatTop = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = TesaWhite };
+        var pnlStatLine = new Panel { Dock = DockStyle.Bottom, Height = 1, BackColor = Color.LightGray };
+        pnlStatTop.Controls.Add(pnlStatLine);
+
+        _lblTotalSamplesToday = CreateStatBox(pnlStatTop, "MẪU HÔM NAY", "0", 20, TesaRed);
+        _lblTotalBatchToday = CreateStatBox(pnlStatTop, "TỔNG KHỐI LƯỢNG", "0.0000", 250, TesaBlue);
+        _lblMinForce = CreateStatBox(pnlStatTop, "MIN (HÔM NAY)", "---", 550, Color.Chocolate);
+        _lblMaxForce = CreateStatBox(pnlStatTop, "MAX (HÔM NAY)", "---", 800, TesaRed);
+
+        _pnlChart = new TesaRoundedPanel { Dock = DockStyle.Fill, BackColor = TesaWhite, BorderRadius = 0 };
         typeof(Panel).InvokeMember("DoubleBuffered", 
             System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, 
             null, _pnlChart, new object[] { true });
@@ -186,50 +307,62 @@ public class MainForm : Form
         _pnlChart.MouseMove += PnlChart_MouseMove;
         _pnlChart.MouseLeave += PnlChart_MouseLeave;
 
-        var pnlSpacer = new Panel { Dock = DockStyle.Top, Height = 20 };
+        pnlLiveInner.Controls.Add(_pnlChart);
+        pnlDashRight.Controls.Add(pnlStatTop);
+        pnlStatTop.SendToBack();
 
-        var pnlGridTitle = new Panel { Dock = DockStyle.Top, Height = 40 };
-        var lblGridTitle = new Label { Text = "Lịch sử kiểm tra (Top 100)", Font = new Font("Segoe UI", 12F, FontStyle.Bold), ForeColor = TesaBlue, AutoSize = true, Location = new Point(0, 5) };
-        pnlGridTitle.Controls.Add(lblGridTitle);
+        // ----------------------------------------------------
+        // TAB 3: DATA SHEET
+        // ----------------------------------------------------
+        var pnlDataTop = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = BackgroundLight };
+        
+        var lblDataTitle = new Label { Text = "Dữ liệu Đã lưu (SQLite Database)", Font = new Font("Segoe UI", 14F, FontStyle.Bold), AutoSize = true, Location = new Point(20, 20) };
+        pnlDataTop.Controls.Add(lblDataTitle);
 
-        var lblSearch = new Label { Text = "🔍 Tìm:", Font = new Font("Segoe UI", 10F, FontStyle.Bold), ForeColor = Color.DimGray, AutoSize = true, Location = new Point(230, 8) };
-        _txtSearch = new TextBox { Width = 200, Location = new Point(290, 6) };
+        var lblSearch = new Label { Text = "Tìm kiếm nhanh:", Font = new Font("Segoe UI", 10F, FontStyle.Regular), ForeColor = Color.DimGray, AutoSize = true, Location = new Point(350, 25) };
+        _txtSearch = new TextBox { Width = 200, Location = new Point(470, 23), BorderStyle = BorderStyle.FixedSingle };
         _txtSearch.TextChanged += TxtSearch_TextChanged;
-        pnlGridTitle.Controls.Add(lblSearch);
-        pnlGridTitle.Controls.Add(_txtSearch);
+        pnlDataTop.Controls.Add(lblSearch);
+        pnlDataTop.Controls.Add(_txtSearch);
 
-        _btnBulkSync = new Button { Text = "Đồng bộ lại", BackColor = TesaBlue, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Size = new Size(110, 30), Location = new Point(500, 2), Cursor = Cursors.Hand };
-        _btnBulkSync.FlatAppearance.BorderSize = 0;
-        _btnBulkSync.Click += BtnBulkSync_Click;
-
-        _btnBulkDelete = new Button { Text = "Xoá", BackColor = TesaRed, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Size = new Size(80, 30), Location = new Point(620, 2), Cursor = Cursors.Hand };
-        _btnBulkDelete.FlatAppearance.BorderSize = 0;
-        _btnBulkDelete.Click += BtnBulkDelete_Click;
-
-        _btnExport = new Button { Text = "Xuất Excel", BackColor = Color.SeaGreen, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Size = new Size(100, 30), Location = new Point(710, 2), Cursor = Cursors.Hand };
-        _btnExport.FlatAppearance.BorderSize = 0;
-        _btnExport.Click += BtnExport_Click;
-
-        _btnBackup = new Button { Text = "Sao lưu DB", BackColor = Color.DarkGoldenrod, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Size = new Size(100, 30), Location = new Point(820, 2), Cursor = Cursors.Hand };
+        _btnBackup = new TesaRoundedButton { Text = "⬇ Sao lưu DB", BackColor = Color.LightGray, ForeColor = Color.Black, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Size = new Size(150, 40), Location = new Point(700, 15), Cursor = Cursors.Hand, BorderRadius = 4, Visible = false };
         _btnBackup.FlatAppearance.BorderSize = 0;
         _btnBackup.Click += BtnBackup_Click;
+        pnlDataTop.Controls.Add(_btnBackup);
 
-        pnlGridTitle.Controls.Add(_btnBulkSync);
-        pnlGridTitle.Controls.Add(_btnBulkDelete);
-        pnlGridTitle.Controls.Add(_btnExport);
-        pnlGridTitle.Controls.Add(_btnBackup);
-        
+        _btnRestore = new TesaRoundedButton { Text = "⬆ Phục hồi DB", BackColor = Color.LightGray, ForeColor = Color.Black, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Size = new Size(150, 40), Location = new Point(860, 15), Cursor = Cursors.Hand, BorderRadius = 4, Visible = false };
+        _btnRestore.FlatAppearance.BorderSize = 0;
+        _btnRestore.Click += BtnRestore_Click;
+        pnlDataTop.Controls.Add(_btnRestore);
+
+        _btnExport = new TesaRoundedButton { Text = "⬇ Xuất báo cáo (.xlsx / .csv)", BackColor = TesaBlue, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Size = new Size(250, 40), Location = new Point(1020, 15), Cursor = Cursors.Hand, BorderRadius = 4 };
+        _btnExport.FlatAppearance.BorderSize = 0;
+        _btnExport.Click += BtnExport_Click;
+        pnlDataTop.Controls.Add(_btnExport);
+
+        _btnBulkDelete = new TesaRoundedButton { Text = "🗑 Xóa mục đã chọn", BackColor = TesaWhite, ForeColor = TesaRed, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Size = new Size(180, 35), Location = new Point(20, 65), Cursor = Cursors.Hand, BorderRadius = 4 };
+        _btnBulkDelete.FlatAppearance.BorderColor = TesaRed;
+        _btnBulkDelete.FlatAppearance.BorderSize = 1;
+        _btnBulkDelete.Click += BtnBulkDelete_Click;
+        pnlDataTop.Controls.Add(_btnBulkDelete);
+
+        _btnBulkSync = new TesaRoundedButton { Text = "Đồng bộ Server", BackColor = Color.MediumPurple, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Size = new Size(150, 35), Location = new Point(220, 65), Cursor = Cursors.Hand, BorderRadius = 4 };
+        _btnBulkSync.FlatAppearance.BorderSize = 0;
+        _btnBulkSync.Click += BtnBulkSync_Click;
+        pnlDataTop.Controls.Add(_btnBulkSync);
+
+        var pnlGridContainer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20, 0, 20, 20) };
         _dgvResults = new AdvancedDataGridView
         {
             Dock = DockStyle.Fill,
             BackgroundColor = TesaWhite,
-            BorderStyle = BorderStyle.None,
+            BorderStyle = BorderStyle.FixedSingle,
             AllowUserToAddRows = false,
             AllowUserToDeleteRows = false,
             ReadOnly = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            RowHeadersVisible = true,
+            RowHeadersVisible = false,
             EnableHeadersVisualStyles = false,
             GridColor = Color.LightGray
         };
@@ -237,8 +370,8 @@ public class MainForm : Form
         _dgvResults.ColumnHeadersDefaultCellStyle.BackColor = TesaBlue;
         _dgvResults.ColumnHeadersDefaultCellStyle.ForeColor = TesaWhite;
         _dgvResults.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-        _dgvResults.ColumnHeadersHeight = 40;
-        _dgvResults.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(240, 248, 255);
+        _dgvResults.ColumnHeadersHeight = 35;
+        _dgvResults.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(245, 245, 245);
         _dgvResults.DefaultCellStyle.SelectionBackColor = Color.LightBlue;
         _dgvResults.DefaultCellStyle.SelectionForeColor = Color.Black;
         
@@ -247,15 +380,140 @@ public class MainForm : Form
         _dgvResults.SelectionChanged += DgvResults_SelectionChanged;
         _dgvResults.CellEndEdit += DgvResults_CellEndEdit;
 
-        pnlRight.Controls.Add(_dgvResults);
-        pnlRight.Controls.Add(pnlGridTitle);
-        pnlRight.Controls.Add(pnlSpacer);
-        pnlRight.Controls.Add(_pnlChart);
-        pnlRight.Controls.Add(lblChartTitle);
+        pnlGridContainer.Controls.Add(_dgvResults);
 
-        this.Controls.Add(pnlRight);
-        this.Controls.Add(pnlLeft);
-        this.Controls.Add(pnlHeader);
+        tabDataSheet.Controls.Add(pnlGridContainer);
+        tabDataSheet.Controls.Add(pnlDataTop);
+
+        this.Controls.Add(_lblSyncStatus);
+
+        _mainTabControl.BringToFront();
+
+        SelectTab(0);
+    }
+
+    private TesaRoundedButton CreateTabButton(string text, int x)
+    {
+        var btn = new TesaRoundedButton
+        {
+            Text = text,
+            Location = new Point(x, 15),
+            Size = new Size(120, 35),
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+            ForeColor = Color.DimGray,
+            BackColor = TesaWhite,
+            Cursor = Cursors.Hand,
+            BorderRadius = 0
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.Click += (s, e) => 
+        {
+            if (text == "Dashboard") SelectTab(0);
+            else if (text == "Data Sheet") SelectTab(1);
+        };
+        return btn;
+    }
+
+    private Label CreateStatBox(Panel parent, string title, string defaultValue, int x, Color valueColor)
+    {
+        var lblTitle = new Label { Text = title, Font = new Font("Segoe UI", 9F, FontStyle.Bold), ForeColor = Color.DimGray, AutoSize = true, Location = new Point(x, 10) };
+        var lblValue = new Label { Text = defaultValue, Font = new Font("Segoe UI", 28F, FontStyle.Bold), ForeColor = valueColor, AutoSize = true, Location = new Point(x - 5, 30) };
+        parent.Controls.Add(lblTitle);
+        parent.Controls.Add(lblValue);
+        return lblValue;
+    }
+
+    private void SelectTab(int index)
+    {
+        _mainTabControl.SelectedIndex = index;
+        
+        _btnTabDashboard.Font = new Font("Segoe UI", 10F, index == 0 ? FontStyle.Bold : FontStyle.Regular);
+        _btnTabDashboard.ForeColor = index == 0 ? TesaRed : Color.DimGray;
+        
+        _btnTabDataSheet.Font = new Font("Segoe UI", 10F, index == 1 ? FontStyle.Bold : FontStyle.Regular);
+        _btnTabDataSheet.ForeColor = index == 1 ? TesaRed : Color.DimGray;
+
+        _pnlNavIndicator.Width = 120;
+        if (index == 0) _pnlNavIndicator.Left = 430;
+        else if (index == 1) _pnlNavIndicator.Left = 560;
+    }
+
+    private void BtnLogin_Click(object? sender, EventArgs e)
+    {
+        if (_isAdminAuthenticated)
+        {
+            // Đăng xuất
+            _isAdminAuthenticated = false;
+            _btnLogin.Text = "Đăng nhập";
+            _btnLogin.BackColor = TesaBlue;
+            _btnGenerateDemo.Visible = false;
+            _btnBackup.Visible = false;
+            _btnRestore.Visible = false;
+            MessageBox.Show("Đã đăng xuất tài khoản Admin.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var formPrompt = new Form()
+        {
+            Width = 350,
+            Height = 200,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            Text = "Xác thực Admin",
+            StartPosition = FormStartPosition.CenterParent,
+            MaximizeBox = false,
+            MinimizeBox = false
+        };
+
+        var lblPrompt = new Label() { Left = 30, Top = 20, Text = "Nhập mật khẩu quản trị:", AutoSize = true, Font = new Font("Segoe UI", 10F) };
+        var txtPrompt = new TextBox() { Left = 30, Top = 50, Width = 270, UseSystemPasswordChar = true, Font = new Font("Segoe UI", 12F) };
+        var btnOk = new Button() { Text = "Xác nhận", Left = 120, Width = 80, Top = 90, DialogResult = DialogResult.OK, BackColor = TesaBlue, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+        
+        formPrompt.Controls.Add(lblPrompt);
+        formPrompt.Controls.Add(txtPrompt);
+        formPrompt.Controls.Add(btnOk);
+        formPrompt.AcceptButton = btnOk;
+
+        if (formPrompt.ShowDialog(this) == DialogResult.OK)
+        {
+            if (txtPrompt.Text == ADMIN_PASSWORD)
+            {
+                _isAdminAuthenticated = true;
+                _btnLogin.Text = "Đăng xuất";
+                _btnLogin.BackColor = Color.DimGray;
+                _btnGenerateDemo.Visible = true;
+                _btnBackup.Visible = true;
+                _btnRestore.Visible = true;
+                MessageBox.Show("Đăng nhập Admin thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("Sai mật khẩu!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+
+    public void UpdateAnalytics()
+    {
+        if (_dbContext == null) return;
+
+        DateTime startOfDay = DateTime.Today;
+        var todayData = _dbContext.TestResults.Where(r => r.Timestamp >= startOfDay).ToList();
+
+        if (todayData.Count == 0)
+        {
+            _lblTotalSamplesToday.Text = "0";
+            _lblTotalBatchToday.Text = "0.00";
+            _lblMinForce.Text = "---";
+            _lblMaxForce.Text = "---";
+        }
+        else
+        {
+            _lblTotalSamplesToday.Text = todayData.Count.ToString();
+            _lblTotalBatchToday.Text = todayData.Sum(r => r.AvgValue).ToString("F2");
+            _lblMinForce.Text = todayData.Min(r => r.AvgValue).ToString("F2") + " N";
+            _lblMaxForce.Text = todayData.Max(r => r.AvgValue).ToString("F2") + " N";
+        }
     }
 
     private void InitializeServices()
@@ -320,8 +578,11 @@ public class MainForm : Form
         if (recentData.Count > 0)
         {
             _latestResultForChart = recentData[0];
+            _lblLiveWeight.Text = $"{_latestResultForChart.AvgValue:F2} {_latestResultForChart.Unit}";
             _pnlChart.Invalidate();
         }
+
+        UpdateAnalytics();
 
         var httpClient = new HttpClient();
         _syncService = new NetworkSyncService(httpClient, "https://api.example.com", "YOUR_JWT_TOKEN");
@@ -626,6 +887,7 @@ public class MainForm : Form
                 }
             }
             _dbContext.SaveChanges();
+            UpdateAnalytics();
         }
     }
 
@@ -690,12 +952,58 @@ public class MainForm : Form
         {
             try
             {
+                // Ép SQLite ghi toàn bộ dữ liệu từ bộ đệm (WAL) xuống file gốc trước khi copy
+                _dbContext.Database.ExecuteSqlRaw("PRAGMA wal_checkpoint(FULL);");
+
                 File.Copy(dbPath, sfd.FileName, overwrite: true);
                 MessageBox.Show("Sao lưu cơ sở dữ liệu thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Lỗi khi sao lưu DB: {ex.Message}\nĐảm bảo bạn có quyền ghi vào thư mục được chọn.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+
+    private void BtnRestore_Click(object? sender, EventArgs e)
+    {
+        using var ofd = new OpenFileDialog { Filter = "SQLite Database (*.db)|*.db", Title = "Chọn file Backup để phục hồi" };
+        if (ofd.ShowDialog() == DialogResult.OK)
+        {
+            var confirmResult = MessageBox.Show("CẢNH BÁO: Phục hồi Database sẽ GHI ĐÈ và XÓA TOÀN BỘ dữ liệu hiện tại (không thể hoàn tác)! Bạn có chắc chắn muốn tiếp tục?", "Xác nhận phục hồi", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (confirmResult == DialogResult.Yes)
+            {
+                try
+                {
+                    string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string dbPath = Path.Combine(appDataFolder, "tesa_HSU2000", "tesa_hsu2000.db");
+                    string walPath = dbPath + "-wal";
+                    string shmPath = dbPath + "-shm";
+
+                    // Hủy kết nối DB hiện tại để nhả file lock
+                    _dbContext.Dispose();
+                    Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    // Xóa file phụ trợ của SQLite
+                    if (File.Exists(walPath)) File.Delete(walPath);
+                    if (File.Exists(shmPath)) File.Delete(shmPath);
+
+                    // Copy đè file backup
+                    File.Copy(ofd.FileName, dbPath, overwrite: true);
+
+                    MessageBox.Show("Phục hồi cơ sở dữ liệu thành công! Ứng dụng sẽ tự động khởi động lại để áp dụng dữ liệu mới.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    Application.Restart();
+                    Environment.Exit(0);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi phục hồi DB: {ex.Message}\nHãy thử tắt ứng dụng và copy thủ công.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Application.Restart();
+                    Environment.Exit(0);
+                }
             }
         }
     }
@@ -896,9 +1204,11 @@ public class MainForm : Form
         }
 
         _latestResultForChart = result;
+        _lblLiveWeight.Text = $"{result.AvgValue:F2} {result.Unit}";
         _zoomFactor = 1.0f; 
         _panX = 0f;
         _pnlChart.Invalidate();
+        UpdateAnalytics();
 
         // Thêm dòng mới vào đầu bảng DataView
         var newRow = _dataTableResults.NewRow();

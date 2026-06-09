@@ -15,7 +15,19 @@
     {
         "Entry"
         {
-        "MsmKey" = "8:_69E294E1F2F8494EA898A8F9AA544818"
+        "MsmKey" = "8:_10C38441C9D34769BD5CA88B44F279E5"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_3F0EFCF9C0354FD0ADE4C78B0CB4E43F"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_D50D03806D0A414DB0F9E7792D4FF956"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -37,6 +49,22 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.7.2"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.7.2 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.7.2"
+                    }
+                }
+            }
         }
         "Release"
         {
@@ -53,6 +81,22 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.7.2"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.7.2 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.7.2"
+                    }
+                }
+            }
         }
     }
     "Deployable"
@@ -70,10 +114,60 @@
         {
             "LaunchCondition"
             {
+                "{A06ECF26-33A3-4562-8140-9B0E340D4F24}:_E9379974C0264C8794C254F21951B626"
+                {
+                "Name" = "8:.NET Core"
+                "Message" = "8:[VSDNETCOREMSG]"
+                "AllowLaterVersions" = "11:FALSE"
+                "InstallUrl" = "8:https://dotnet.microsoft.com/download/dotnet-core/[NetCoreVerMajorDotMinor]"
+                "IsNETCore" = "11:TRUE"
+                "Architecture" = "2:0"
+                "Runtime" = "2:0"
+                }
             }
         }
         "File"
         {
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_10C38441C9D34769BD5CA88B44F279E5"
+            {
+            "SourcePath" = "8:..\\..\\Test\\Test\\tesa_logo_On-screen_RGB.ico"
+            "TargetName" = "8:tesa_logo_On-screen_RGB.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_FD80DDD090F648D186DF466FEA6E6751"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_D50D03806D0A414DB0F9E7792D4FF956"
+            {
+            "SourcePath" = "8:..\\tesa HSU2000 Data Record\\bin\\Debug\\net10.0-windows\\runtimes\\win-x64\\native\\e_sqlite3.dll"
+            "TargetName" = "8:e_sqlite3.dll"
+            "Tag" = "8:"
+            "Folder" = "8:_FD80DDD090F648D186DF466FEA6E6751"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
         }
         "FileType"
         {
@@ -129,9 +223,9 @@
         "Product"
         {
         "Name" = "8:Microsoft Visual Studio"
-        "ProductName" = "8:Application"
+        "ProductName" = "8:tesa HSU-2000 Record"
         "ProductCode" = "8:{7565B26F-2743-4B07-B089-98DD7F47063D}"
-        "PackageCode" = "8:{75532F53-4237-497D-BB6C-4B6962D59E8B}"
+        "PackageCode" = "8:{91B13A1B-6982-4ADB-9836-5AFB75185606}"
         "UpgradeCode" = "8:{BE2747A0-D901-4F28-8596-1464D6C2AC70}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
@@ -139,12 +233,12 @@
         "DetectNewerInstalledVersion" = "11:TRUE"
         "InstallAllUsers" = "11:FALSE"
         "ProductVersion" = "8:1.0.0"
-        "Manufacturer" = "8:Default Company Name"
+        "Manufacturer" = "8:tesa PHp"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
-        "Title" = "8:Application"
+        "Title" = "8:tesa HSU-2000 Record"
         "Subject" = "8:"
-        "ARPCONTACT" = "8:Default Company Name"
+        "ARPCONTACT" = "8:Truong, Quyen/ tSH PHp"
         "Keywords" = "8:"
         "ARPCOMMENTS" = "8:"
         "ARPURLINFOABOUT" = "8:"
@@ -251,6 +345,34 @@
         }
         "Shortcut"
         {
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_24C755C9C4E64F24B9F4EE8D89B3E8C2"
+            {
+            "Name" = "8:tesa HSU-2000 Data Record"
+            "Arguments" = "8:"
+            "Description" = "8:"
+            "ShowCmd" = "3:1"
+            "IconIndex" = "3:0"
+            "Transitive" = "11:FALSE"
+            "Target" = "8:_3F0EFCF9C0354FD0ADE4C78B0CB4E43F"
+            "Folder" = "8:_0B35C09C4F394330A64E509E4CF9C79A"
+            "WorkingFolder" = "8:_FD80DDD090F648D186DF466FEA6E6751"
+            "Icon" = "8:_10C38441C9D34769BD5CA88B44F279E5"
+            "Feature" = "8:"
+            }
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_99B75D59BF784EDDB1953D3F61711292"
+            {
+            "Name" = "8:tesa HSU-2000 Data Record"
+            "Arguments" = "8:"
+            "Description" = "8:"
+            "ShowCmd" = "3:1"
+            "IconIndex" = "3:0"
+            "Transitive" = "11:FALSE"
+            "Target" = "8:_3F0EFCF9C0354FD0ADE4C78B0CB4E43F"
+            "Folder" = "8:_1764BDA1E8BE4E56B726B0E0E01F58F9"
+            "WorkingFolder" = "8:_FD80DDD090F648D186DF466FEA6E6751"
+            "Icon" = "8:_10C38441C9D34769BD5CA88B44F279E5"
+            "Feature" = "8:"
+            }
         }
         "UserInterface"
         {
@@ -650,9 +772,9 @@
         }
         "ProjectOutput"
         {
-            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_69E294E1F2F8494EA898A8F9AA544818"
+            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_3F0EFCF9C0354FD0ADE4C78B0CB4E43F"
             {
-            "SourcePath" = "8:..\\tesa HSU2000 Data Record\\obj\\Debug\\net10.0-windows\\tesa HSU2000 Data Record.dll"
+            "SourcePath" = "8:..\\tesa HSU2000 Data Record\\obj\\Release\\net10.0-windows\\apphost.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_FD80DDD090F648D186DF466FEA6E6751"
@@ -671,8 +793,8 @@
             "IsolateTo" = "8:"
             "ProjectOutputGroupRegister" = "3:1"
             "OutputConfiguration" = "8:"
-            "OutputGroupCanonicalName" = "8:Built"
-            "OutputProjectGuid" = "8:{2F2F6E10-CB7A-4A0B-8C55-EBDDF204B2BD}"
+            "OutputGroupCanonicalName" = "8:PublishItems"
+            "OutputProjectGuid" = "8:{03C17A8F-1BD0-6C2B-4E5E-D9D0FA531EFF}"
             "ShowKeyOutput" = "11:TRUE"
                 "ExcludeFilters"
                 {
