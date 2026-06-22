@@ -97,7 +97,7 @@ public class MainForm : Form
 
     private void InitializeComponent()
     {
-        this.Text = "tesa Scale Data Collection - ML2041 (HSU2000)";
+        this.Text = "tesa HSU-2000 Data Record";
         this.Size = new Size(1350, 850);
         this.BackColor = BackgroundLight;
         this.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point);
@@ -124,7 +124,7 @@ public class MainForm : Form
 
         var lblTitle = new Label
         {
-            Text = "tesa Scale Data Collection - ML2041",
+            Text = "tesa HSU-2000 Data Record",
             Font = new Font("Segoe UI", 12F, FontStyle.Regular),
             ForeColor = Color.Black,
             AutoSize = true,
