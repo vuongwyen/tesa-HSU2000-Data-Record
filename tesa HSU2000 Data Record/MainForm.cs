@@ -52,6 +52,10 @@ public class MainForm : Form
     private TesaRoundedButton _btnBackup;
     private TesaRoundedButton _btnRestore;
     private TextBox _txtSearch;
+    private TesaRoundedButton _btnCopyPivot;
+    private DateTimePicker _dtpFrom;
+    private DateTimePicker _dtpTo;
+    private TesaRoundedButton _btnFilterDate;
 
     // Inputs
     private TextBox _txtNart;
@@ -237,7 +241,7 @@ public class MainForm : Form
 
         _lblLiveWeight = new Label 
         { 
-            Text = "0.00 N", 
+            Text = "0.000 N", 
             Font = new Font("Segoe UI", 48F, FontStyle.Bold), 
             ForeColor = Color.FromArgb(150, 160, 175), 
             Dock = DockStyle.Bottom,
@@ -292,7 +296,7 @@ public class MainForm : Form
         pnlStatTop.Controls.Add(pnlStatLine);
 
         _lblTotalSamplesToday = CreateStatBox(pnlStatTop, "MẪU HÔM NAY", "0", 20, TesaRed);
-        _lblTotalBatchToday = CreateStatBox(pnlStatTop, "TỔNG KHỐI LƯỢNG", "0.0000", 250, TesaBlue);
+        _lblTotalBatchToday = CreateStatBox(pnlStatTop, "TỔNG KHỐI LƯỢNG", "0.000", 250, TesaBlue);
         _lblMinForce = CreateStatBox(pnlStatTop, "MIN (HÔM NAY)", "---", 550, Color.Chocolate);
         _lblMaxForce = CreateStatBox(pnlStatTop, "MAX (HÔM NAY)", "---", 800, TesaRed);
 
@@ -350,6 +354,28 @@ public class MainForm : Form
         _btnBulkSync.FlatAppearance.BorderSize = 0;
         _btnBulkSync.Click += BtnBulkSync_Click;
         pnlDataTop.Controls.Add(_btnBulkSync);
+
+        var lblFromDate = new Label { Text = "Từ ngày:", Font = new Font("Segoe UI", 10F, FontStyle.Regular), ForeColor = Color.DimGray, AutoSize = true, Location = new Point(390, 72) };
+        _dtpFrom = new DateTimePicker { Format = DateTimePickerFormat.Short, Location = new Point(460, 70), Width = 120, Font = new Font("Segoe UI", 10F) };
+        _dtpFrom.Value = DateTime.Today.AddDays(-7);
+        pnlDataTop.Controls.Add(lblFromDate);
+        pnlDataTop.Controls.Add(_dtpFrom);
+
+        var lblToDate = new Label { Text = "Đến ngày:", Font = new Font("Segoe UI", 10F, FontStyle.Regular), ForeColor = Color.DimGray, AutoSize = true, Location = new Point(600, 72) };
+        _dtpTo = new DateTimePicker { Format = DateTimePickerFormat.Short, Location = new Point(670, 70), Width = 120, Font = new Font("Segoe UI", 10F) };
+        _dtpTo.Value = DateTime.Now;
+        pnlDataTop.Controls.Add(lblToDate);
+        pnlDataTop.Controls.Add(_dtpTo);
+
+        _btnFilterDate = new TesaRoundedButton { Text = "Lọc", BackColor = TesaRed, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Size = new Size(80, 28), Location = new Point(810, 68), Cursor = Cursors.Hand, BorderRadius = 4 };
+        _btnFilterDate.FlatAppearance.BorderSize = 0;
+        _btnFilterDate.Click += BtnFilterDate_Click;
+        pnlDataTop.Controls.Add(_btnFilterDate);
+
+        _btnCopyPivot = new TesaRoundedButton { Text = "Copy Pivot", BackColor = Color.DarkGoldenrod, ForeColor = TesaWhite, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold), Size = new Size(110, 35), Location = new Point(900, 65), Cursor = Cursors.Hand, BorderRadius = 4 };
+        _btnCopyPivot.FlatAppearance.BorderSize = 0;
+        _btnCopyPivot.Click += BtnCopyPivot_Click;
+        pnlDataTop.Controls.Add(_btnCopyPivot);
 
         var pnlGridContainer = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20, 0, 20, 20) };
         _dgvResults = new AdvancedDataGridView
@@ -510,9 +536,9 @@ public class MainForm : Form
         else
         {
             _lblTotalSamplesToday.Text = todayData.Count.ToString();
-            _lblTotalBatchToday.Text = todayData.Sum(r => r.AvgValue).ToString("F2");
-            _lblMinForce.Text = todayData.Min(r => r.AvgValue).ToString("F2") + " N";
-            _lblMaxForce.Text = todayData.Max(r => r.AvgValue).ToString("F2") + " N";
+            _lblTotalBatchToday.Text = todayData.Sum(r => r.AvgValue).ToString("F3");
+            _lblMinForce.Text = todayData.Min(r => r.AvgValue).ToString("F3") + " N";
+            _lblMaxForce.Text = todayData.Max(r => r.AvgValue).ToString("F3") + " N";
         }
     }
 
@@ -549,13 +575,6 @@ public class MainForm : Form
         _dataTableResults.Columns.Add("AvgValue", typeof(decimal));
         _dataTableResults.Columns.Add("Unit", typeof(string));
 
-        // Load 100 kết quả gần nhất từ DB
-        var recentData = _dbContext.TestResults.OrderByDescending(r => r.Id).Take(100).ToList();
-        foreach (var r in recentData)
-        {
-            _dataTableResults.Rows.Add(r.Id, r.Nart, r.BatchCode, r.Location, r.SampleName, r.Tester, r.Timestamp, r.AvgValue, r.Unit);
-        }
-
         _bindingSource = new BindingSource { DataSource = _dataTableResults };
         _dgvResults.DataSource = _bindingSource;
 
@@ -571,23 +590,100 @@ public class MainForm : Form
         {
             _dgvResults.Columns["AvgValue"].HeaderText = "Trung bình";
             _dgvResults.Columns["AvgValue"].ReadOnly = true;
+            _dgvResults.Columns["AvgValue"].DefaultCellStyle.Format = "F3";
         }
         if (_dgvResults.Columns["Unit"] != null) _dgvResults.Columns["Unit"].HeaderText = "Đơn vị";
 
-        // Hiển thị biểu đồ cho dòng đầu tiên nếu có dữ liệu
-        if (recentData.Count > 0)
-        {
-            _latestResultForChart = recentData[0];
-            _lblLiveWeight.Text = $"{_latestResultForChart.AvgValue:F2} {_latestResultForChart.Unit}";
-            _pnlChart.Invalidate();
-        }
-
-        UpdateAnalytics();
+        // Load dữ liệu theo khoảng thời gian mặc định (7 ngày gần nhất)
+        LoadDataByDateRange(_dtpFrom.Value, _dtpTo.Value);
 
         var httpClient = new HttpClient();
         _syncService = new NetworkSyncService(httpClient, "https://api.example.com", "YOUR_JWT_TOKEN");
         _syncService.SyncStatusChanged += SyncService_SyncStatusChanged;
         _syncService.StartSyncing();
+    }
+
+    private void BtnFilterDate_Click(object? sender, EventArgs e)
+    {
+        LoadDataByDateRange(_dtpFrom.Value, _dtpTo.Value);
+    }
+
+    private void BtnCopyPivot_Click(object? sender, EventArgs e)
+    {
+        if (_dgvResults.SelectedRows.Count == 0)
+        {
+            MessageBox.Show("Vui lòng chọn ít nhất một dòng để copy.", "Cảnh báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var selectedRows = _dgvResults.SelectedRows.Cast<DataGridViewRow>()
+            .Where(r => r.Cells["Id"].Value != null)
+            .OrderBy(r => Convert.ToInt32(r.Cells["Id"].Value))
+            .ToList();
+
+        var grouped = selectedRows.GroupBy(r => new {
+            Nart = r.Cells["Nart"].Value?.ToString(),
+            Batch = r.Cells["BatchCode"].Value?.ToString()
+        });
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine("D\tG\tC");
+
+        foreach (var group in grouped)
+        {
+            string valD = "---", valG = "---", valC = "---";
+
+            foreach (var row in group)
+            {
+                string loc = row.Cells["Location"].Value?.ToString()?.Trim().ToUpper() ?? "";
+                string val = Convert.ToDecimal(row.Cells["AvgValue"].Value).ToString("F3");
+                
+                if (loc == "D") valD = val;
+                else if (loc == "G") valG = val;
+                else if (loc == "C") valC = val;
+            }
+
+            sb.AppendLine($"{valD}\t{valG}\t{valC}");
+        }
+
+        try
+        {
+            Clipboard.SetText(sb.ToString().TrimEnd());
+            MessageBox.Show("Đã copy dữ liệu theo định dạng Pivot vào Clipboard!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Không thể truy cập Clipboard: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void LoadDataByDateRange(DateTime from, DateTime to)
+    {
+        if (_dbContext == null || _dataTableResults == null) return;
+        
+        // Điều chỉnh toDate thành cuối ngày
+        var endOfDay = to.Date.AddDays(1).AddTicks(-1);
+
+        _dataTableResults.Rows.Clear();
+        
+        var data = _dbContext.TestResults
+            .Where(r => r.Timestamp >= from.Date && r.Timestamp <= endOfDay)
+            .OrderByDescending(r => r.Id)
+            .ToList();
+            
+        foreach (var r in data)
+        {
+            _dataTableResults.Rows.Add(r.Id, r.Nart, r.BatchCode, r.Location, r.SampleName, r.Tester, r.Timestamp, r.AvgValue, r.Unit);
+        }
+
+        if (data.Count > 0)
+        {
+            _latestResultForChart = data[0];
+            _lblLiveWeight.Text = $"{_latestResultForChart.AvgValue:F3} {_latestResultForChart.Unit}";
+            _pnlChart.Invalidate();
+        }
+
+        UpdateAnalytics();
     }
 
     private void DgvResults_FilterStringChanged(object? sender, EventArgs e)
@@ -932,6 +1028,58 @@ public class MainForm : Form
                 }
                 
                 ws.Columns().AdjustToContents(); // Tự căn lề
+
+                // --- TẠO SHEET PIVOT ---
+                var wsPivot = wb.Worksheets.Add("Pivot");
+                
+                // Header cho Sheet Pivot
+                var headers = new string[] { "Mã Nart", "Mã Lô", "D", "G", "C" };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    var cell = wsPivot.Cell(1, i + 1);
+                    cell.Value = headers[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromColor(TesaBlue);
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+
+                // Gom nhóm dữ liệu
+                var allRows = _dgvResults.Rows.Cast<DataGridViewRow>()
+                    .Where(r => r.Cells["Id"].Value != null)
+                    .OrderBy(r => Convert.ToInt32(r.Cells["Id"].Value))
+                    .ToList();
+
+                var grouped = allRows.GroupBy(r => new {
+                    Nart = r.Cells["Nart"].Value?.ToString(),
+                    Batch = r.Cells["BatchCode"].Value?.ToString()
+                });
+
+                int rowIndex = 2;
+                foreach (var group in grouped)
+                {
+                    string valD = "---", valG = "---", valC = "---";
+
+                    foreach (var row in group)
+                    {
+                        string loc = row.Cells["Location"].Value?.ToString()?.Trim().ToUpper() ?? "";
+                        string val = Convert.ToDecimal(row.Cells["AvgValue"].Value).ToString("F3");
+                        
+                        if (loc == "D") valD = val;
+                        else if (loc == "G") valG = val;
+                        else if (loc == "C") valC = val;
+                    }
+
+                    wsPivot.Cell(rowIndex, 1).Value = group.Key.Nart;
+                    wsPivot.Cell(rowIndex, 2).Value = group.Key.Batch;
+                    wsPivot.Cell(rowIndex, 3).Value = valD;
+                    wsPivot.Cell(rowIndex, 4).Value = valG;
+                    wsPivot.Cell(rowIndex, 5).Value = valC;
+                    
+                    rowIndex++;
+                }
+                
+                wsPivot.Columns().AdjustToContents();
+
                 wb.SaveAs(sfd.FileName);
                 MessageBox.Show("Xuất báo cáo thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -1100,8 +1248,8 @@ public class MainForm : Form
             g.DrawLines(pen, points);
         }
 
-        g.DrawString($"Max: {maxVal:F2} N", new Font("Segoe UI", 8F, FontStyle.Bold), Brushes.DimGray, 5, 5);
-        g.DrawString($"Min: {minVal:F2} N", new Font("Segoe UI", 8F, FontStyle.Bold), Brushes.DimGray, 5, height - 20);
+        g.DrawString($"Max: {maxVal:F3} N", new Font("Segoe UI", 8F, FontStyle.Bold), Brushes.DimGray, 5, 5);
+        g.DrawString($"Min: {minVal:F3} N", new Font("Segoe UI", 8F, FontStyle.Bold), Brushes.DimGray, 5, height - 20);
 
         if (_currentMousePos.X >= 0 && _currentMousePos.X <= width && _currentMousePos.Y >= 0 && _currentMousePos.Y <= height)
         {
@@ -1123,7 +1271,7 @@ public class MainForm : Form
 
                     g.FillEllipse(Brushes.DarkBlue, px - 4, py - 4, 8, 8);
 
-                    string tooltip = $"Index: {closestIndex}\nLực: {data[closestIndex]:F2} N";
+                    string tooltip = $"Index: {closestIndex}\nLực: {data[closestIndex]:F3} N";
                     var font = new Font("Segoe UI", 9F, FontStyle.Bold);
                     SizeF textSize = g.MeasureString(tooltip, font);
                     
@@ -1204,7 +1352,7 @@ public class MainForm : Form
         }
 
         _latestResultForChart = result;
-        _lblLiveWeight.Text = $"{result.AvgValue:F2} {result.Unit}";
+        _lblLiveWeight.Text = $"{result.AvgValue:F3} {result.Unit}";
         _zoomFactor = 1.0f; 
         _panX = 0f;
         _pnlChart.Invalidate();
