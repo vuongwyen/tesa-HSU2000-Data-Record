@@ -29,7 +29,7 @@ public class MainForm : Form
 
     // Services
     private HsuWatcherManager? _watcherManager;
-    private NetworkSyncService? _syncService;
+
     private AppDbContext _dbContext;
 
     // Data Binding
@@ -214,6 +214,7 @@ public class MainForm : Form
 
         pnlRefInner.Controls.Add(new Label { Text = "Lô hàng (Batch)", Location = new Point(10, 100), AutoSize = true, ForeColor = Color.DimGray });
         _txtBatchCode = new TextBox { Location = new Point(10, 125), Width = 150, BorderStyle = BorderStyle.FixedSingle };
+        _txtBatchCode.KeyDown += TxtBatchCode_KeyDown;
         pnlRefInner.Controls.Add(_txtBatchCode);
 
         pnlRefInner.Controls.Add(new Label { Text = "Tên mẫu (Sample Name)", Location = new Point(170, 100), AutoSize = true, ForeColor = Color.DimGray });
@@ -597,10 +598,7 @@ public class MainForm : Form
         // Load dữ liệu theo khoảng thời gian mặc định (7 ngày gần nhất)
         LoadDataByDateRange(_dtpFrom.Value, _dtpTo.Value);
 
-        var httpClient = new HttpClient();
-        _syncService = new NetworkSyncService(httpClient, "https://api.example.com", "YOUR_JWT_TOKEN");
-        _syncService.SyncStatusChanged += SyncService_SyncStatusChanged;
-        _syncService.StartSyncing();
+
     }
 
     private void BtnFilterDate_Click(object? sender, EventArgs e)
@@ -948,7 +946,7 @@ public class MainForm : Form
                 var result = _dbContext.TestResults.FirstOrDefault(x => x.Id == id);
                 if (result != null)
                 {
-                    _syncService?.EnqueueForSync(result);
+            
                     count++;
                 }
             }
@@ -1291,6 +1289,19 @@ public class MainForm : Form
         }
     }
 
+    private void TxtBatchCode_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyCode == Keys.Enter)
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            if (_lblWatcherStatus.Text.Contains("ĐANG DỪNG"))
+            {
+                BtnToggleWatcher_Click(null, EventArgs.Empty);
+            }
+        }
+    }
+
     private void BtnToggleWatcher_Click(object? sender, EventArgs e)
     {
         if (_lblWatcherStatus.Text.Contains("ĐANG DỪNG"))
@@ -1371,7 +1382,25 @@ public class MainForm : Form
         newRow["Unit"] = result.Unit;
         _dataTableResults.Rows.InsertAt(newRow, 0);
 
-        _syncService?.EnqueueForSync(result);
+        // Auto-rotate Location (D -> G -> C -> D) for lazy users
+        var currentLoc = result.Location.ToUpper();
+        if (currentLoc == "D") _txtLocation.Text = "G";
+        else if (currentLoc == "G") _txtLocation.Text = "C";
+        else if (currentLoc == "C") 
+        {
+            _txtLocation.Text = "D";
+            // Auto-increment SampleName
+            string sample = _txtSampleName.Text.Trim();
+            var match = System.Text.RegularExpressions.Regex.Match(sample, @"\d+");
+            if (match.Success && int.TryParse(match.Value, out int num))
+            {
+                _txtSampleName.Text = sample.Substring(0, match.Index) + (num + 1).ToString() + sample.Substring(match.Index + match.Length);
+            }
+            else if (string.IsNullOrEmpty(sample))
+            {
+                _txtSampleName.Text = "2"; // Default fallback if empty
+            }
+        }
     }
 
     private void WatcherManager_ErrorOccurred(object? sender, string message)
@@ -1385,21 +1414,12 @@ public class MainForm : Form
         MessageBox.Show(message, "Lỗi Thư mục", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
-    private void SyncService_SyncStatusChanged(object? sender, string status)
-    {
-        if (this.InvokeRequired)
-        {
-            this.BeginInvoke(new Action(() => SyncService_SyncStatusChanged(sender, status)));
-            return;
-        }
 
-        _lblSyncStatus.Text = $"Đồng bộ: {status}";
-    }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _watcherManager?.Dispose();
-        _syncService?.Dispose();
+
         _dbContext?.Dispose(); 
         base.OnFormClosing(e);
     }
