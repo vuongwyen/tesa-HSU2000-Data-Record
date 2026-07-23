@@ -6,8 +6,10 @@ namespace tesa_HSU2000_Data_Record.Models;
 
 public class HsuTestResult
 {
-    // Cột mới làm khóa chính cho Database
     public int Id { get; set; }
+    
+    public string RecordId { get; set; } = Guid.NewGuid().ToString();
+    public bool IsSynced { get; set; } = false;
 
     public string Nart { get; set; } = string.Empty;
     public string BatchCode { get; set; } = string.Empty;

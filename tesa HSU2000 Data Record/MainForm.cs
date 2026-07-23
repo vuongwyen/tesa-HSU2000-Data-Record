@@ -29,6 +29,7 @@ public class MainForm : Form
 
     // Services
     private HsuWatcherManager? _watcherManager;
+    private NetworkSyncWorker _networkWorker;
 
     private AppDbContext _dbContext;
 
@@ -79,6 +80,7 @@ public class MainForm : Form
     private TesaRoundedButton _btnTabDataSheet;
     private TabControl _mainTabControl;
     private Button _btnLogin;
+    private Button _btnServerSettings;
 
     // New UXUI Analytics
     private Label _lblTotalSamplesToday;
@@ -97,6 +99,7 @@ public class MainForm : Form
     {
         InitializeComponent();
         InitializeServices();
+        this.FormClosing += MainForm_FormClosing;
     }
 
     private void InitializeComponent()
@@ -158,6 +161,23 @@ public class MainForm : Form
         _btnLogin.FlatAppearance.BorderSize = 0;
         _btnLogin.Click += BtnLogin_Click;
         pnlHeader.Controls.Add(_btnLogin);
+
+        _btnServerSettings = new Button
+        {
+            Text = "⚙️ Server API",
+            BackColor = TesaWhite,
+            ForeColor = Color.DimGray,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            Size = new Size(110, 30),
+            Location = new Point(this.Width - 260, 15),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Cursor = Cursors.Hand
+        };
+        _btnServerSettings.FlatAppearance.BorderSize = 1;
+        _btnServerSettings.FlatAppearance.BorderColor = Color.LightGray;
+        _btnServerSettings.Click += BtnServerSettings_Click;
+        pnlHeader.Controls.Add(_btnServerSettings);
 
         pnlHeader.Controls.Add(_btnTabDashboard);
         pnlHeader.Controls.Add(_btnTabDataSheet);
@@ -466,6 +486,12 @@ public class MainForm : Form
         else if (index == 1) _pnlNavIndicator.Left = 560;
     }
 
+    private void BtnServerSettings_Click(object? sender, EventArgs e)
+    {
+        using var frm = new FormServerSettings();
+        frm.ShowDialog(this);
+    }
+
     private void BtnLogin_Click(object? sender, EventArgs e)
     {
         if (_isAdminAuthenticated)
@@ -548,11 +574,21 @@ public class MainForm : Form
         // Khởi tạo Database SQLite
         _dbContext = new AppDbContext();
         _dbContext.Database.EnsureCreated();
+        _dbContext.MigrateSchema();
 
         // Thiết lập thư mục dữ liệu mặc định an toàn (My Documents)
         string docFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string defaultPath = Path.Combine(docFolder, "tesa_HSU2000_Data");
         
+        // Start Network Sync Worker
+        _networkWorker = new NetworkSyncWorker();
+        _networkWorker.SyncStatusChanged += (s, msg) => 
+        {
+            if (this.IsHandleCreated) 
+                this.BeginInvoke(new Action(() => _lblSyncStatus.Text = msg));
+        };
+        _networkWorker.Start();
+
         var setting = _dbContext.Settings.FirstOrDefault();
         if (setting == null)
         {
@@ -1414,13 +1450,11 @@ public class MainForm : Form
         MessageBox.Show(message, "Lỗi Thư mục", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
-
-
-    protected override void OnFormClosing(FormClosingEventArgs e)
+    private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {
+        _networkWorker?.Stop();
+        _networkWorker?.Dispose();
         _watcherManager?.Dispose();
-
-        _dbContext?.Dispose(); 
-        base.OnFormClosing(e);
+        _dbContext?.Dispose();
     }
 }

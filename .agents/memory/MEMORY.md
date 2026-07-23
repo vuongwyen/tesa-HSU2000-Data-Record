@@ -5,3 +5,6 @@
 
 ## Project
 - [project] Always create a new dedicated branch for major code changes → project-conventions.md
+
+## Reference
+- [reference] ScaleData API Contract (Auth, Sync, Rules, Idempotency) → api-contract.md

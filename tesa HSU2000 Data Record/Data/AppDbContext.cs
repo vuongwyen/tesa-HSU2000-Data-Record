@@ -38,4 +38,27 @@ public class AppDbContext : DbContext
                 v => string.IsNullOrEmpty(v) ? new List<decimal>() : JsonSerializer.Deserialize<List<decimal>>(v, (JsonSerializerOptions)null)
             );
     }
+
+    public void MigrateSchema()
+    {
+        // Add RecordId and IsSynced to TestResults if they don't exist
+        try
+        {
+            this.Database.ExecuteSqlRaw("ALTER TABLE TestResults ADD COLUMN RecordId TEXT NOT NULL DEFAULT '';");
+            this.Database.ExecuteSqlRaw("UPDATE TestResults SET RecordId = lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6))) WHERE RecordId = '';");
+        }
+        catch { /* Column already exists */ }
+
+        try
+        {
+            this.Database.ExecuteSqlRaw("ALTER TABLE TestResults ADD COLUMN IsSynced INTEGER NOT NULL DEFAULT 0;");
+        }
+        catch { /* Column already exists */ }
+
+        // Add Api settings to AppSetting
+        try { this.Database.ExecuteSqlRaw("ALTER TABLE Settings ADD COLUMN ApiBaseUrl TEXT NOT NULL DEFAULT '';"); } catch { }
+        try { this.Database.ExecuteSqlRaw("ALTER TABLE Settings ADD COLUMN ApiUsername TEXT NOT NULL DEFAULT '';"); } catch { }
+        try { this.Database.ExecuteSqlRaw("ALTER TABLE Settings ADD COLUMN ApiPassword TEXT NOT NULL DEFAULT '';"); } catch { }
+        try { this.Database.ExecuteSqlRaw($"ALTER TABLE Settings ADD COLUMN DeviceId TEXT NOT NULL DEFAULT '{System.Environment.MachineName}';"); } catch { }
+    }
 }
