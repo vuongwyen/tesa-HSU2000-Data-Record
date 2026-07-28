@@ -144,4 +144,3 @@ tesa HSU2000 Data Record/
 - **Người duy trì**: `treepoo2023@gmail.com`
 - **Tài liệu tham khảo**:
   - Hướng dẫn vận hành thiết bị test lực dính tesa HSU 2000.
-  - Tài liệu chuẩn API ScaleData (xem `api-contract.md` trong `.agents/memory`).
