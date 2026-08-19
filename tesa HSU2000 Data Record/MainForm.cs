@@ -90,7 +90,7 @@ public class MainForm : Form
     private Label _lblLiveWeight;
 
     // Auth
-    private const string ADMIN_PASSWORD = "password";
+    private const string ADMIN_PASSWORD = "admin123";
     private bool _isAdminAuthenticated = false;
 
     public MainForm()
@@ -594,6 +594,20 @@ public class MainForm : Form
             _dgvResults.Columns["AvgValue"].DefaultCellStyle.Format = "F3";
         }
         if (_dgvResults.Columns["Unit"] != null) _dgvResults.Columns["Unit"].HeaderText = "Đơn vị";
+
+        // Thêm cột Xem biểu đồ (Mắt)
+        if (_dgvResults.Columns["ViewChart"] == null)
+        {
+            var btnViewCol = new DataGridViewButtonColumn();
+            btnViewCol.Name = "ViewChart";
+            btnViewCol.HeaderText = "";
+            btnViewCol.Text = "👁";
+            btnViewCol.UseColumnTextForButtonValue = true;
+            btnViewCol.Width = 35;
+            btnViewCol.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            _dgvResults.Columns.Add(btnViewCol);
+            _dgvResults.CellContentClick += DgvResults_CellContentClick;
+        }
 
         // Load dữ liệu theo khoảng thời gian mặc định (7 ngày gần nhất)
         LoadDataByDateRange(_dtpFrom.Value, _dtpTo.Value);
@@ -1195,6 +1209,34 @@ public class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show($"Không thể lưu thay đổi vào CSDL: {ex.Message}", "Lỗi DB", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void DgvResults_CellContentClick(object? sender, DataGridViewCellEventArgs e)
+    {
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0 && _dgvResults.Columns[e.ColumnIndex].Name == "ViewChart")
+        {
+            if (_dgvResults.Rows[e.RowIndex].DataBoundItem is System.Data.DataRowView rowView)
+            {
+                int id = (int)rowView["Id"];
+                var result = _dbContext.TestResults.FirstOrDefault(x => x.Id == id);
+                if (result != null && result.RawForceData != null && result.RawForceData.Count > 0)
+                {
+                    try
+                    {
+                        using var frm = new FormChartViewer(result);
+                        frm.ShowDialog(this);
+                    }
+                    catch
+                    {
+                        MessageBox.Show("Không thể đọc dữ liệu thô của biểu đồ này.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Bản ghi này không có dữ liệu lực thô.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
         }
     }
 
