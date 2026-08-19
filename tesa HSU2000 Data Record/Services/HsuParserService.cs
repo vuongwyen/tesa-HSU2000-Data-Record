@@ -46,6 +46,12 @@ public class HsuParserService
             if (decimal.TryParse(targetColumn.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal force))
             {
                 forceValues.Add(force);
+                
+                // Cố gắng lấy độ dài từ cột 0
+                if (columns.Length > 1 && decimal.TryParse(columns[0].Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out decimal length))
+                {
+                    result.MaxLength = Math.Max(result.MaxLength, length);
+                }
             }
         }
 

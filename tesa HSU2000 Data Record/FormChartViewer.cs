@@ -31,7 +31,8 @@ public class FormChartViewer : Form
 
         if (_data.Any())
         {
-            lblInfo.Text = $"Nart: {_result.Nart} | Lô: {_result.BatchCode} | Mẫu: {_result.SampleName} | Vị trí: {_result.Location} | Min: {_data.Min():F2} N | Max: {_data.Max():F2} N | TB: {_result.AvgValue:F2} N";
+            string lenText = _result.MaxLength > 0 ? $"{_result.MaxLength:F3} m" : $"~{(_data.Count * 0.01):F2} m";
+            lblInfo.Text = $"Nart: {_result.Nart} | Lô: {_result.BatchCode} | Mẫu: {_result.SampleName} | Vị trí: {_result.Location} | Dài: {lenText} | Min: {_data.Min():F2} N | Max: {_data.Max():F2} N | TB: {_result.AvgValue:F2} N";
         }
         this.Controls.Add(lblInfo);
 

@@ -548,6 +548,7 @@ public class MainForm : Form
         // Khởi tạo Database SQLite
         _dbContext = new AppDbContext();
         _dbContext.Database.EnsureCreated();
+        _dbContext.MigrateSchema();
 
         // Thiết lập thư mục dữ liệu mặc định an toàn (My Documents)
         string docFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -574,6 +575,7 @@ public class MainForm : Form
         _dataTableResults.Columns.Add("Tester", typeof(string));
         _dataTableResults.Columns.Add("Timestamp", typeof(DateTime));
         _dataTableResults.Columns.Add("AvgValue", typeof(decimal));
+        _dataTableResults.Columns.Add("MaxLength", typeof(decimal));
         _dataTableResults.Columns.Add("Unit", typeof(string));
 
         _bindingSource = new BindingSource { DataSource = _dataTableResults };
@@ -592,6 +594,12 @@ public class MainForm : Form
             _dgvResults.Columns["AvgValue"].HeaderText = "Trung bình";
             _dgvResults.Columns["AvgValue"].ReadOnly = true;
             _dgvResults.Columns["AvgValue"].DefaultCellStyle.Format = "F3";
+        }
+        if (_dgvResults.Columns["MaxLength"] != null) 
+        {
+            _dgvResults.Columns["MaxLength"].HeaderText = "Độ dài (m)";
+            _dgvResults.Columns["MaxLength"].ReadOnly = true;
+            _dgvResults.Columns["MaxLength"].DefaultCellStyle.Format = "F3";
         }
         if (_dgvResults.Columns["Unit"] != null) _dgvResults.Columns["Unit"].HeaderText = "Đơn vị";
 
@@ -685,7 +693,7 @@ public class MainForm : Form
             
         foreach (var r in data)
         {
-            _dataTableResults.Rows.Add(r.Id, r.Nart, r.BatchCode, r.Location, r.SampleName, r.Tester, r.Timestamp, r.AvgValue, r.Unit);
+            _dataTableResults.Rows.Add(r.Id, r.Nart, r.BatchCode, r.Location, r.SampleName, r.Tester, r.Timestamp, r.AvgValue, r.MaxLength, r.Unit);
         }
 
         if (data.Count > 0)
@@ -1421,6 +1429,7 @@ public class MainForm : Form
         newRow["Tester"] = result.Tester;
         newRow["Timestamp"] = result.Timestamp;
         newRow["AvgValue"] = result.AvgValue;
+        newRow["MaxLength"] = result.MaxLength;
         newRow["Unit"] = result.Unit;
         _dataTableResults.Rows.InsertAt(newRow, 0);
 
